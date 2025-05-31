@@ -17,8 +17,6 @@ CAN_BUSTYPE = "socketcan"
 # WebSocketApp 인스턴스 전역 변수
 ws_app = None
 
-
-
 # ── 충전 상태 감시 및 CAN 제어 루프 ──
 def charge_control_loop():
     """

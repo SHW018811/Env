@@ -48,7 +48,7 @@ except Exception as e:
 
 # 시퀀스 길이와 피처 설정
 SEQ_LEN = 120
-FEATURE_KEYS = ["Voltage", "SOC", "Temp", "SOH", "DOD"]
+FEATURE_KEYS = ["Voltage_terminal", "SOC", "Temperature", "Charge_Current"]
 FEATURE_DIM = len(FEATURE_KEYS)
 
 # 고정 길이 버퍼 생성
@@ -135,11 +135,10 @@ def Update_data():
     # 2) 피처 벡터 생성
     try:
         feature_vector = np.array([
-            float(incoming.get("Voltage", 0)),
+            float(incoming.get("Voltage_terminal", 0)),
             float(incoming.get("SOC", 0)),
-            float(incoming.get("Temp", 0)),
-            float(incoming.get("SOH", 0)),
-            float(incoming.get("DOD", 0))
+            float(incoming.get("Temperature", 0)),
+            float(incoming.get("Charge_Current", 0))
         ], dtype=float)
     except Exception as e:
         print(f"[LSTM] Feature 벡터 생성 오류: {e}")
