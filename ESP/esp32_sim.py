@@ -1,3 +1,4 @@
+import requests
 import threading
 import json
 import time
@@ -15,6 +16,53 @@ CAN_BUSTYPE = "socketcan"
 
 # WebSocketApp 인스턴스 전역 변수
 ws_app = None
+
+
+# ── 충전 상태 감시 및 CAN 제어 루프 ──
+def charge_control_loop():
+    """
+    주기적으로 http://localhost:9359/ 에 GET 요청을 보내
+    '🟢 충전 중' 또는 '🔴 충전 중단' 상태를 감지하여,
+    충전 상태가 변하면 CAN ID=0x010 제어 프레임을 전송한다.
+    """
+    prev_charging = None
+    bus = None
+    try:
+        bus = can.Bus(channel="vcan0", bustype="socketcan")
+    except Exception as e:
+        print(f"[CHG_CTRL] CAN bus open failed: {e}")
+        return
+    print("[CHG_CTRL] Charge control loop started.")
+    while True:
+        try:
+            resp = requests.get("http://localhost:9359/")
+            if resp.status_code == 200:
+                txt = resp.text
+                if "🟢 충전 중" in txt:
+                    curr_charging = True
+                elif "🔴 충전 중단" in txt:
+                    curr_charging = False
+                else:
+                    curr_charging = prev_charging
+            else:
+                curr_charging = prev_charging
+        except Exception as e:
+            print(f"[CHG_CTRL] HTTP req error: {e}")
+            curr_charging = prev_charging
+        if prev_charging is not None and curr_charging is not None and prev_charging != curr_charging:
+            try:
+                if curr_charging:
+                    frame = can.Message(arbitration_id=0x010, data=bytes([0x01]), is_extended_id=False, dlc=1)
+                    bus.send(frame)
+                    print("[CHG_CTRL] Sent CAN: START_CHARGE (0x01)")
+                else:
+                    frame = can.Message(arbitration_id=0x010, data=bytes([0x00]), is_extended_id=False, dlc=1)
+                    bus.send(frame)
+                    print("[CHG_CTRL] Sent CAN: STOP_CHARGE (0x00)")
+            except Exception as e:
+                print(f"[CHG_CTRL] CAN send error: {e}")
+        prev_charging = curr_charging
+        time.sleep(0.5)
 
 
 # ── 2) CAN → WebSocket 역할 함수 ──
@@ -162,6 +210,10 @@ def run_websocket_client():
 
 # ── 5) 메인 진입점 ──
 if __name__ == "__main__":
+    # 충전 상태 감시/제어 루프 스레드 시작
+    t_charge = threading.Thread(target=charge_control_loop, daemon=True)
+    t_charge.start()
+
     # 1) WebSocket 연결 스레드 시작
     t_ws = threading.Thread(target=run_websocket_client, daemon=True)
     t_ws.start()
