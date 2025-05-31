@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang = "ko">
+    <head>
+        <meta charset="UTF-8">
+        <title>EV 충전 페이지</title>
+        <link rel="stylesheet" href = "{{url_for('static', filename = 'style.css')}}">
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    </head>
+    <body>
+        <div class = "Top">
+            <header>
+                <h2>EV 충전 모니터링</h2>
+            </header>
+        </div>
+        <div class="Midtop" style="display: flex; flex-wrap: wrap;">
+            <section class="Leftgroup" style="flex: 0 0 350px;">
+                <h3>차량 정보</h3>
+                <p>차대번호 : {{info.VIN}}</p>
+                <p>차종 : {{info.Model}}</p>
+                <p>연결 유무 : {{info.Connect}}</p>
+                <p>상태 : {{datas}}</p>
+                <div class="BatteryStatus">
+                    <h4>배터리 상태</h4>
+                    <div class="battery-circle">
+                        <span class="battery-percent"><span id="soc">{{data.SOC}}</span>%</span>
+                    </div>
+                    <div class="battery-bar">
+                        <label for="battery-level">충전 상태</label>
+                        <progress id="soh" value={{data.SOH}} max="100"></progress>
+                        <h4>배터리 건강</h4>
+                        <canvas id="Timer" width="100" height="45"></canvas>
+                    </div>
+                </div>
+            </section>
+            <div class="Rightgroup" style="flex: 1; min-width: 200px;">
+                <section class = "BtnRightTop">
+                    <form id="startForm" method="POST" action="/start"><button type="submit" id="startbtn">충전 시작</button></form>
+                    <form id="stopForm" method="POST" action="/stop"><button type="submit" id="stopbtn">충전 중단</button></form>
+                    <form id="cnntForm" method="POST" action="/connector"><button type = "submit" id = "cnntbtn">커넥터 연결</button></form>
+                    <form id="mov_moniter" method="POST" action="/monitor"><button type = "submit" id = "mntbtn">모니터링 이동</button></form>
+                </section>
+                <section class="RightTopbottom">
+                    <div class = "chart_set">
+                        <h4>현재 차량 온도: <span id="temp">{{data.Temp}}</span>°C</h4>
+                        <canvas id="Temper" width="100" height="20"></canvas>
+                    </div>
+                    <div class="BatteryVoltage">
+                        <h4>배터리 전압: <span id="volt">{{data.Voltage}}</span>V</h4>
+                        <div class="battery-voltage-value">
+                            <canvas id="Volt" width="100" height="20"></canvas>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </body>
+    <script>
+    //차트 --------------------------------------------------------------------
+    var chartArea = document.getElementById('Temper').getContext('2d');
+    var Tempchart = new Chart(chartArea, {
+        type: 'line',
+        data: {
+                labels: [],
+                //실제 차트에 표시할 데이터
+                datasets: [{
+                    //dataset의 이름
+                    label: 'Temperature',
+                    //dataset값
+                    data: [],
+                    //배경색
+                    backgroundColor: 'rgba(255, 30, 30, 0.2)',
+                    //선 색
+                    borderColor: 'rgba(255, 0, 0, 1)',
+                    //선 두께
+                    borderWidth: 3
+                }]
+            },//차트의 설정(Object)
+            options: { //축에 관한 설정(Object)
+                scales: {
+                    y: { //y축에 대한 설정(Object)
+                        beginAtZero: true,
+                        max: 50
+                    }
+                }
+            }
+    });
+
+    var chartArea2 = document.getElementById('Volt').getContext('2d');
+    var Voltchart = new Chart(chartArea2, {
+        type: 'line',
+        data: {
+                labels: [],
+                //실제 차트에 표시할 데이터
+                datasets: [{
+                    //dataset의 이름
+                    label: 'Voltage',
+                    //dataset값
+                    data: [],
+                    //배경색
+                    backgroundColor: 'rgba(255, 200, 0, 0.2)',
+                    //선 색
+                    borderColor: 'rgba(255, 150, 30, 1)',
+                    //선 두께
+                    borderWidth: 3
+                }]
+            },//차트의 설정(Object)
+            options: { //축에 관한 설정(Object)
+                scales: {
+                    y: { //y축에 대한 설정(Object)
+                        beginAtZero: true,
+                        min:300,
+                        max:1000
+                    }
+                }
+            }
+    });
+
+
+    var chartArea3 = document.getElementById('Timer').getContext('2d');
+    var Timechart = new Chart(chartArea3, {
+        type: 'line',
+        data: {
+                labels: [],
+                //실제 차트에 표시할 데이터
+                datasets: [{
+                    //dataset의 이름
+                    label: 'Time',
+                    //dataset값
+                    data: [],
+                    //배경색
+                    backgroundColor: 'rgba(0, 255, 50, 0.2)',
+                    //선 색
+                    borderColor: 'rgba(0, 255, 50, 1)',
+                    //선 두께
+                    borderWidth: 3
+                }]
+            },//차트의 설정(Object)
+            options: { //축에 관한 설정(Object)
+                scales: {
+                    y: { //y축에 대한 설정(Object)
+                        beginAtZero: true,
+                    }
+                }
+            }
+    });
+    //차트 --------------------------------------------------------------------
+
+    function fetchData() {
+        fetch('/update/data')  // JSON을 반환하는 새 경로
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('soc').textContent = data.SOC;
+                const sohValue = parseFloat(data.SOH);
+                document.getElementById('soh').value = isFinite(sohValue) ? sohValue : 0;
+                document.getElementById('temp').textContent = data.Temp;
+                document.getElementById('volt').textContent = data.Voltage;
+                //document.getElementById('Temper').textContent = data.Temp;
+                var now = new Date().toLocaleTimeString();
+                if (Tempchart.data.labels.length >= 10) {
+                    Tempchart.data.labels.shift();
+                    Tempchart.data.datasets[0].data.shift();
+                }
+                Tempchart.data.labels.push(now);
+                Tempchart.data.datasets[0].data.push(data.Temp);
+                if(Voltchart.data.labels.length >= 10){
+                    Voltchart.data.labels.shift();
+                    Voltchart.data.datasets[0].data.shift();
+                }
+                Voltchart.data.labels.push(now);
+                Voltchart.data.datasets[0].data.push(data.Voltage);
+                Tempchart.update();
+                Voltchart.update();
+            })
+            .catch(error => {
+                console.error('SOC 갱신 실패:', error);
+            });
+    }
+
+    function on_message(ws, message) {
+        try {
+            msg = JSON.parse(message);
+            can_id = String(msg.id || "");
+            data_list = msg.data || [];
+            data_hex = data_list.map(byte => ('0' + byte.toString(16)).slice(-2)).join('');
+            lst = [];
+            for (let i = 0; i < data_hex.length; i += 2) {
+                lst.push(data_hex.slice(i, i + 2));
+            }
+            chg = "";
+            if (can_id in idmap) {
+                chg = idmap[can_id](lst);
+                console.log(`ID: ${can_id} -> ${data_hex} (${chg})`);
+                console.log(`📤 POST 전송 시도: ${test_data}`);
+                res = fetch("http://127.0.0.1:9359/update", {
+                    method: "POST",
+                    body: JSON.stringify(test_data),
+                    headers: {
+                        "Content-Type": "application/json"
+                    }
+                });
+                console.log(`✅ 서버 응답: ${res.status_code}, 내용: ${res.text}`);
+            }
+        } catch (e) {
+            console.error(`Error: ${e}`);
+        }
+    }
+
+    function on_error(ws, error) {
+        console.error(`WebSocket error: ${error}`);
+    }
+
+    function on_close(ws, close_status_code, close_msg) {
+        console.log("WebSocket connection closed");
+    }
+
+    function on_open(ws) {
+        console.log("WebSocket connection established");
+    }
+
+    function run_websocket() {
+        websocket.enableTrace(false);
+        ws = new websocket.WebSocket("ws://127.0.0.1:12261");
+        ws.onopen = on_open;
+        ws.onmessage = on_message;
+        ws.onerror = on_error;
+        ws.onclose = on_close;
+    }
+
+    setInterval(fetchData, 500);
+    </script>
+</html>
