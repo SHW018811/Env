@@ -1,7 +1,4 @@
-<<<<<<< HEAD
 import requests
-=======
->>>>>>> 7d8d791 (test)
 import threading
 import json
 import time
@@ -21,7 +18,7 @@ CAN_BUSTYPE = "socketcan"
 ws_app = None
 
 
-<<<<<<< HEAD
+
 # ── 충전 상태 감시 및 CAN 제어 루프 ──
 def charge_control_loop():
     """
@@ -68,9 +65,6 @@ def charge_control_loop():
         prev_charging = curr_charging
         time.sleep(0.5)
 
-
-=======
->>>>>>> 7d8d791 (test)
 # ── 2) CAN → WebSocket 역할 함수 ──
 def can_rx_to_ws_loop():
     """
@@ -216,13 +210,9 @@ def run_websocket_client():
 
 # ── 5) 메인 진입점 ──
 if __name__ == "__main__":
-<<<<<<< HEAD
     # 충전 상태 감시/제어 루프 스레드 시작
     t_charge = threading.Thread(target=charge_control_loop, daemon=True)
     t_charge.start()
-
-=======
->>>>>>> 7d8d791 (test)
     # 1) WebSocket 연결 스레드 시작
     t_ws = threading.Thread(target=run_websocket_client, daemon=True)
     t_ws.start()
