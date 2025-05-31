@@ -683,7 +683,7 @@ void *ekf_thread(void *arg){                        //tid5
             if(avg_soc > 90.0) CellBalancing(i); 
         }
         pthread_mutex_unlock(&lock);
-        usleep(50000);
+        usleep(10000);
     }
     return NULL;
 }
