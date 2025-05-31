@@ -13,10 +13,62 @@
 
 #include <libwebsockets.h>
 #include <jansson.h> // for JSON parsing
+#include <pthread.h>
 
 struct lws_context *ws_context = NULL;
 struct lws *ws_client = NULL;
 pthread_t ws_thread;
+
+// WebSocket protocol callback for handling incoming messages
+static int callback_ws(struct lws *wsi, enum lws_callback_reasons reason,
+                       void *user, void *in, size_t len) {
+    if (reason == LWS_CALLBACK_CLIENT_RECEIVE) {
+        // Null-terminate received payload
+        char *buf = malloc(len + 1);
+        if (!buf) return -1;
+        memcpy(buf, in, len);
+        buf[len] = '\0';
+        // Parse JSON and extract "type" and "act"
+        json_error_t err;
+        json_t *root = json_loads(buf, 0, &err);
+        free(buf);
+        if (root) {
+            const char *type = json_string_value(json_object_get(root, "type"));
+            const char *act = json_string_value(json_object_get(root, "act"));
+            if (type && act && strcmp(type, "CMD") == 0) {
+                struct can_frame frame;
+                frame.can_id = 0x010;
+                frame.can_dlc = 1;
+                if (strcmp(act, "STOP_CHARGE") == 0) {
+                    frame.data[0] = 0x00;
+                } else if (strcmp(act, "START_CHARGE") == 0) {
+                    frame.data[0] = 0x01;
+                } else {
+                    json_decref(root);
+                    return 0;
+                }
+                // Send CAN frame on vcan0
+                int tx_sock = socket(PF_CAN, SOCK_RAW, CAN_RAW);
+                if (tx_sock >= 0) {
+                    struct ifreq ifr;
+                    struct sockaddr_can addr_can;
+                    strncpy(ifr.ifr_name, "vcan0", IFNAMSIZ - 1);
+                    ifr.ifr_name[IFNAMSIZ - 1] = '\0';
+                    if (ioctl(tx_sock, SIOCGIFINDEX, &ifr) >= 0) {
+                        addr_can.can_family = AF_CAN;
+                        addr_can.can_ifindex = ifr.ifr_ifindex;
+                        if (bind(tx_sock, (struct sockaddr *)&addr_can, sizeof(addr_can)) == 0) {
+                            write(tx_sock, &frame, sizeof(struct can_frame));
+                        }
+                    }
+                    close(tx_sock);
+                }
+            }
+            json_decref(root);
+        }
+    }
+    return 0;
+}
 
 int main(void) {
     int sock;
@@ -88,14 +140,24 @@ int main(void) {
 }
 
 
+// WebSocket protocols array for libwebsockets
+static const struct lws_protocols protocols[] = {
+    {
+        .name = "example-protocol",
+        .callback = callback_ws,
+        .per_session_data_size = 0,
+        .rx_buffer_size = 512,
+    },
+    { NULL, NULL, 0, 0 }
+};
+
 void *ws_client_thread(void *arg) {
     struct lws_context_creation_info info;
     struct lws_client_connect_info ccinfo;
-    const char *protocols[] = { "lws-minimal-client", NULL };
 
     memset(&info, 0, sizeof(info));
     info.port = CONTEXT_PORT_NO_LISTEN;
-    info.protocols = (const struct lws_protocols *)protocols;
+    info.protocols = protocols;
     info.options = LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT;
 
     ws_context = lws_create_context(&info);
@@ -111,7 +173,7 @@ void *ws_client_thread(void *arg) {
     ccinfo.path = "/";
     ccinfo.host = lws_canonical_hostname(ws_context);
     ccinfo.origin = "origin";
-    ccinfo.protocol = protocols[0];
+    ccinfo.protocol = protocols[0].name;
 
     ws_client = lws_client_connect_via_info(&ccinfo);
     if (!ws_client) {
@@ -122,52 +184,6 @@ void *ws_client_thread(void *arg) {
 
     while (1) {
         lws_service(ws_context, 100);
-
-        // Check if a message has been received
-        unsigned char buf[512];
-        int n = lws_receive(ws_client, buf, sizeof(buf) - 1);
-        if (n > 0) {
-            buf[n] = '\0'; // null-terminate JSON string
-            // Parse JSON and extract "type" and "act"
-            json_error_t err;
-            json_t *root = json_loads((const char *)buf, 0, &err);
-            if (root) {
-                const char *type = json_string_value(json_object_get(root, "type"));
-                const char *act = json_string_value(json_object_get(root, "act"));
-                if (type && act && strcmp(type, "CMD") == 0) {
-                    // Determine CAN ID and data based on act
-                    struct can_frame frame;
-                    frame.can_id = 0x010;
-                    frame.can_dlc = 1;
-                    if (strcmp(act, "STOP_CHARGE") == 0) {
-                        frame.data[0] = 0x00;
-                    } else if (strcmp(act, "START_CHARGE") == 0) {
-                        frame.data[0] = 0x01;
-                    } else {
-                        // unknown command, ignore
-                        json_decref(root);
-                        continue;
-                    }
-                    // Open CAN socket to send
-                    int tx_sock = socket(PF_CAN, SOCK_RAW, CAN_RAW);
-                    if (tx_sock >= 0) {
-                        struct ifreq ifr;
-                        struct sockaddr_can addr;
-                        strncpy(ifr.ifr_name, "vcan0", IFNAMSIZ - 1);
-                        ifr.ifr_name[IFNAMSIZ - 1] = '\0';
-                        if (ioctl(tx_sock, SIOCGIFINDEX, &ifr) >= 0) {
-                            addr.can_family = AF_CAN;
-                            addr.can_ifindex = ifr.ifr_ifindex;
-                            if (bind(tx_sock, (struct sockaddr *)&addr, sizeof(addr)) == 0) {
-                                write(tx_sock, &frame, sizeof(struct can_frame));
-                            }
-                        }
-                        close(tx_sock);
-                    }
-                }
-                json_decref(root);
-            }
-        }
     }
 
     lws_context_destroy(ws_context);
