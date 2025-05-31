@@ -19,7 +19,7 @@ double SocFromOcv(double ocv) {
     while (i < OCV_SOC_T_SIZE - 1 && charge_ocv[i + 1] < ocv) i++;                            // find index of OCV value in charge_soc
     double ocv_lower  = charge_ocv[i];                                                        // calculate accurate OCV via linear interpolation
     double ocv_upper = charge_ocv[i + 1];
-    double t = (ocv - ocv_upper) / (ocv_upper - ocv_lower);
+    double t = (ocv - ocv_lower) / (ocv_upper - ocv_lower);
     return (charge_soc[i] + t * (charge_soc[i + 1] - charge_soc[i]));
 }
 

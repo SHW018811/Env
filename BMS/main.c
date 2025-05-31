@@ -541,7 +541,8 @@ void SimulateTerminalVoltage(int i){
     if(battery[i].SOC < 0.0) battery[i].SOC = 0;
     if(battery[i].SOC > 100.0) battery[i].SOC = 100;
     battery[i].voltage_delay = battery[i].voltage_delay * exp(-DELTA_TIME / (battery[i].R1 * battery[i].C1)) + battery[i].R1 * ( 1 - exp(-DELTA_TIME / (battery[i].R1 * battery[i].C1))) * battery[i].charge_current;
-    battery[i].voltage_terminal = OcvFromSoc(battery[i].SOC) - battery[i].voltage_delay - battery[i].R0 * battery[i].charge_current;
+    double noise = ((double) rand() / RAND_MAX) * 0.3;
+    battery[i].voltage_terminal = OcvFromSoc(battery[i].SOC) - battery[i].voltage_delay - battery[i].R0 * (battery[i].charge_current + noise);
     bms_soc.SOC = battery[i].SOC;
 }
 
