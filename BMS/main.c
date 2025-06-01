@@ -676,29 +676,38 @@ void CellBalancing(int i) {
         battery[i].voltage_terminal = OcvFromSoc(battery[i].SOC) - battery[i].voltage_delay - battery[i].R0 * battery[i].charge_current;
     }
 */
-
-void *ekf_thread(void *arg){                        // tid5
-    while(ifrunning) {
+void *ekf_thread(void *arg) { // tid5
+    while (ifrunning) {
         pthread_mutex_lock(&lock);
-        for(int i=0; i<BATTERY_CELLS; i++){    
-            if (bms_status.Status == 1) {  // while charging
+        for (int i = 0; i < BATTERY_CELLS; i++) {
+            if (bms_status.Status == 1) {  // 충전 중일 때만
                 Update_Temperature(i);
                 Update_Resistance(i);
-                ChargeCurrentLimits(i);     // set charge voltage
-                SimulateTerminalVoltage(i); // simulate charging
+                ChargeCurrentLimits(i);       // 충전 전류/전압 한계 계산
+                SimulateTerminalVoltage(i);   // 내부 전압, SOC 업데이트
+                if (g_voltageattack == 1) {
+                    // 예: 0번 셀에 과전압 (+0.5V) 발생
+                    if (i == 0) {
+                        battery[i].voltage_terminal += 0.5;
+                        // 과전압이 너무 높아지지 않도록 최대값 제한
+                        if (battery[i].voltage_terminal > VOLTAGE_MAX + 1.0) {
+                            battery[i].voltage_terminal = VOLTAGE_MAX + 1.0;
+                        }
+                    }
+                }
             }
+
             SOCEKF(i);
             double avg_soc = 0;
-            for(int k=0; k<BATTERY_CELLS; k++) avg_soc += battery[k].SOC;
+            for (int k = 0; k < BATTERY_CELLS; k++) avg_soc += battery[k].SOC;
             avg_soc /= BATTERY_CELLS;
-            if(avg_soc > 90.0) CellBalancing(i); 
+            if (avg_soc > 90.0) CellBalancing(i);
         }
         pthread_mutex_unlock(&lock);
         usleep(10000);
     }
     return NULL;
 }
-
 void *generate_can_msg_thread(void *arg) {          // tid6
     while (ifrunning) {
         MinMax_IdValue_t minmax_temp = default_minmax;
