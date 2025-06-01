@@ -520,6 +520,8 @@ void Update_Temperature(int i){
         heater_on = 0;
         cooler_on = 0;
     }
+    if(heater_on != 0 || cooler_on != 0) g_iftempfan = 1;
+    else g_iftempfan = 0;
     total_heat = (battery[i].R0 * pow(battery[i].charge_current, 2)) + heater_on - cooler_on;
     battery[i].temp += DELTA_TIME / 200 * (total_heat - (battery[i].temp - bms_temperature.AirTemp) / 3);
 }
@@ -555,7 +557,8 @@ void SimulateTerminalVoltage(int i){
     if(battery[i].SOC < 0.0) battery[i].SOC = 0;
     if(battery[i].SOC > 100.0) battery[i].SOC = 100;
     battery[i].voltage_delay = battery[i].voltage_delay * exp(-DELTA_TIME / (battery[i].R1 * battery[i].C1)) + battery[i].R1 * ( 1 - exp(-DELTA_TIME / (battery[i].R1 * battery[i].C1))) * battery[i].charge_current;
-    battery[i].voltage_terminal = OcvFromSoc(battery[i].SOC) - battery[i].voltage_delay - battery[i].R0 * battery[i].charge_current;
+    if(g_voltageattack != 0) battery[i].voltage_terminal = OcvFromSoc(battery[i].SOC) - battery[i].voltage_delay - battery[i].R0 * battery[i].charge_current;
+    else battery[i].voltage_terminal += 0.01;
     bms_soc.SOC = battery[i].SOC;
 }
 
@@ -685,18 +688,7 @@ void *ekf_thread(void *arg) { // tid5
                 Update_Resistance(i);
                 ChargeCurrentLimits(i);       // 충전 전류/전압 한계 계산
                 SimulateTerminalVoltage(i);   // 내부 전압, SOC 업데이트
-                if (g_voltageattack == 1) {
-                    // 예: 0번 셀에 과전압 (+0.5V) 발생
-                    if (i == 0) {
-                        battery[i].voltage_terminal += 0.5;
-                        // 과전압이 너무 높아지지 않도록 최대값 제한
-                        if (battery[i].voltage_terminal > VOLTAGE_MAX + 1.0) {
-                            battery[i].voltage_terminal = VOLTAGE_MAX + 1.0;
-                        }
-                    }
-                }
             }
-
             SOCEKF(i);
             double avg_soc = 0;
             for (int k = 0; k < BATTERY_CELLS; k++) avg_soc += battery[k].SOC;
