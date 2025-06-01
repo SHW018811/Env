@@ -23,8 +23,7 @@ all_headers.h
 #include <time.h>
 #include <sys/time.h>
 #include <math.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
+
 //MACROS
 #define INTERFACENAMESIZE 50
 
@@ -53,23 +52,17 @@ all_headers.h
 //MACROS for setting default values for dbc
 #define BATTERY_CELLS 192
 #define VOLTAGE_MIN 2.5
-#define VOLTAGE_MAX 4.2
+#define VOLTAGE_MAX 4.5
 #define CELLS_IN_LINE 10
-#define CELL_CAPACITY 4.07611
+#define CELL_CAPACITY 4.07611f
 #define SOC_TAPER_START 80.0
 #define SOC_TAPER_END 98.0
 
-#define COULOMBIC_EFFICIENCY 1.0
-#define DELTA_TIME 1.0
-#define HEATER_ON_TEMP 15.0
-#define COOLER_ON_TEMP 35.0
-#define HEAT_COOL_POWER 5.0
-#define R0_REFERENCE 0.00005884314
-#define R1_REFERENCE 0.01145801322
-#define R_COEFF 0.003
-#define HYSTERSIS 0.01
-#define VOLTAGE_CONTROL 50
+#define COULOMBIC_EFFICIENCY 1
+#define DELTA_TIME 1
+
 //userdefined headers
 #include "dbc.h"
 #include "./ocv_soc/ocv_soc_t.h"
+
 #endif // ALL_HEADERS_H

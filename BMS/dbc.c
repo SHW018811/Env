@@ -43,10 +43,10 @@ BMS_Charge_Current_Limits_t bms_charge_current_limits = {
 
 // Reset (ID: 1574, 0x626)
 BMS_SOC_t bms_soc = {
-    .SOC = 0x0,
+    .SOC = 0x32,
     .DOD = 0x0000,
-    .Capacity = 0,
-    .SOH = 100
+    .Capacity = 121,
+    .SOH = 95
 };
 
 // Reset (ID: 1575, 0x627)
@@ -79,14 +79,14 @@ BMS_DC_Charging_t bms_dc_charging = {
 
 Battery_t default_battery = {
     .temp = 0x19,
-    .R0 = 0.00005884314,
-    .R1 = 0.001145801322,
-    .C1 = 4846.080679,
+    .R0 = 0.00005884314f,
+    .R1 = 0.011f,
+    .C1 = 4846.080679f,
     .capacity = CELL_CAPACITY,
-    .charge_current = -0.41,
-    .voltage_terminal = 0,
-    .voltage_delay = 0,
-    .SOC = 0
+    .charge_current = -0.41f,
+    .voltage_terminal = 0x0000,
+    .voltage_delay = 0x0000,
+    .SOC = 0x0000
 };
 
 Battery_t battery[BATTERY_CELLS];
