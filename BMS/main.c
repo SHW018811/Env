@@ -548,7 +548,7 @@ void ChargeCurrentLimits(int i){
     }
     if(battery[i].temp < 0.0) local_charge_current_limits = 0.0;
     else if(battery[i].temp < 15.0) local_charge_current_cc *= 0.5;
-    if(g_surgeattack != 1) battery[i].charge_current = local_charge_current_limits;
+    if(g_surgeattack != 1) battery[i].charge_current = local_charge_current_cc * (1 - 0.8 * 1);
     else battery[i].charge_current = local_charge_current_cc;
 }
 
