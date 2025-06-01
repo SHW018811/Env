@@ -5,14 +5,8 @@ import signal
 import datetime
 import os
 
-# ── LSTM 관련 임포트 추가 ──
-import joblib
-import numpy as np
-from collections import deque
-
 app = Flask(__name__)
 
-# ── 기존 전역 변수 ──
 socket_data = {}
 charging = 2
 test_socket_process = None
@@ -26,33 +20,6 @@ Car_stat: dict = {
     "Connect" : "커넥터 연결 해제됨", #Default connector stat
     "Alert" : False #Modal alram stat
 }
-
-# 현재 파일(__file__) 위치: Env/Web/main.py
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # → Env 폴더
-MODEL_DIR = os.path.join(BASE_DIR, "LSTM", "models")
-LSTM_MODEL_PATH = os.path.join(MODEL_DIR, "lstm_pred.h5")
-SCALER_PATH     = os.path.join(MODEL_DIR, "scaler.pkl")
-THRESHOLD_PATH  = os.path.join(MODEL_DIR, "threshold.npy")
-# 미리 로드
-try:
-    import tensorflow as tf
-    lstm_model = tf.keras.models.load_model(LSTM_MODEL_PATH, compile=False)
-    scaler = joblib.load(SCALER_PATH)
-    threshold = float(np.load(THRESHOLD_PATH))
-    print(f"[LSTM] 모델, 스케일러, threshold 로드 완료 (threshold={threshold:.6f})")
-except Exception as e:
-    print(f"[LSTM] 모델 로드 실패: {e}")
-    lstm_model = None
-    scaler = None
-    threshold = None
-
-# 시퀀스 길이와 피처 설정
-SEQ_LEN = 120
-FEATURE_KEYS = ["Voltage_terminal", "SOC", "Temperature", "Charge_Current"]
-FEATURE_DIM = len(FEATURE_KEYS)
-
-# 고정 길이 버퍼 생성
-buffer_deque = deque(maxlen=SEQ_LEN)
 @app.route('/') #main page router
 def index():
     global socket_data
@@ -126,49 +93,8 @@ def Senddata():
 
 @app.route('/update', methods=['POST'])
 def Update_data():
-    global socket_data, buffer_deque, lstm_model, scaler, threshold
-
-    # 1) 들어온 JSON 저장
-    incoming = request.get_json()
-    socket_data = incoming.copy()
-
-    # 2) 피처 벡터 생성
-    try:
-        feature_vector = np.array([
-            float(incoming.get("Voltage_terminal", 0)),
-            float(incoming.get("SOC", 0)),
-            float(incoming.get("Temperature", 0)),
-            float(incoming.get("Charge_Current", 0))
-        ], dtype=float)
-    except Exception as e:
-        print(f"[LSTM] Feature 벡터 생성 오류: {e}")
-        return jsonify({"status": "invalid data"}), 400
-
-    # 3) 버퍼에 추가
-    buffer_deque.append(feature_vector)
-
-    # 4) 버퍼가 가득 차면 예측 수행
-    if (
-        lstm_model is not None
-        and scaler is not None
-        and threshold is not None
-        and len(buffer_deque) == SEQ_LEN
-    ):
-        arr = np.array(buffer_deque)  # shape: (SEQ_LEN, FEATURE_DIM)
-        arr_scaled = scaler.transform(arr)
-        input_seq = arr_scaled.reshape((1, SEQ_LEN, FEATURE_DIM))
-
-        # LSTM 예측
-        pred = lstm_model.predict(input_seq, verbose=0).flatten()
-        actual_scaled = scaler.transform(arr[-1:].reshape(1, -1)).flatten()
-
-        # 평균 절대 오차 계산
-        err = np.mean(np.abs(pred - actual_scaled))
-
-        if err > threshold:
-            print(f"[LSTM][Anomaly] err={err:.6f} > threshold={threshold:.6f}")
-            # 필요 시 추가 처리 (예: WebSocket으로 STOP_CHARGE 전송)
-
+    global socket_data
+    socket_data = request.get_json()
     return jsonify({"status": "received"})
 
 if __name__ == '__main__':
