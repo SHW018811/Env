@@ -159,10 +159,10 @@ void PrintCell() {
     if (local_iftempfan == 1) printf(BLUE "  [Cooling fan active]  " RESET);
     else if (local_iftempfan == 2) printf(RED "  [Heater fan active]  " RESET);
     else printf("  [fan not activate]  " RESET);
-    if(local_tempattack == 1) printf(RED "[TempAttack]                " RESET);
-    else printf("                " RESET);
-    if(local_surgeattack == 1) printf(RED "[SurgeAttack]                " RESET);
-    else printf("                " RESET);
+    if(local_tempattack == 1) printf(RED "[TempAttack]  " RESET);
+    else printf(" " RESET);
+    if(local_surgeattack == 1) printf(RED "[SurgeAttack]  " RESET);
+    else printf(" " RESET);
 }
 
 void PrintLogo(int option) {
@@ -537,7 +537,8 @@ void ChargeCurrentLimits(int i){
     }
     if(battery[i].temp < 0.0) local_charge_current_limits = 0.0;
     else if(battery[i].temp < 15.0) local_charge_current_cc *= 0.5;
-    battery[i].charge_current = local_charge_current_limits;
+    if(g_surgeattack != 1) battery[i].charge_current = local_charge_current_limits;
+    else battery[i].charge_current = local_charge_current_cc;
 }
 
 void SimulateTerminalVoltage(int i){
