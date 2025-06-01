@@ -756,7 +756,7 @@ void *generate_can_msg_thread(void *arg) {          // tid6
         bms_temperature.MinTemp = minmax_temp.Min;
         bms_temperature.MinTempID = minmax_temp.MinId;
 
-        bms_battery_info.Voltage = total_voltages;
+        bms_battery_info.Voltage = (total_voltages / BATTERY_CELLS);
         bms_battery_info.MaxVoltage = DeScaleVoltage(minmax_voltage.Max);
         bms_battery_info.MaxVoltageID = minmax_voltage.MaxId;
         bms_battery_info.MinVoltage = DeScaleVoltage(minmax_voltage.Min);
