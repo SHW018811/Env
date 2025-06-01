@@ -511,30 +511,41 @@ void Init_Battery(){
 }
 
 void Update_Temperature(int i){
-    double heater_on, cooler_on, total_heat;
-    if(g_tempattack != 1){
-        double temp_diff = 25.0 - bms_temperature.AirTemp;
-        if(temp_diff > 0){
+    const double SETPOINT = 25.0;
+    double heater_on = 0, cooler_on = 0, total_heat;
+
+    if (g_tempattack != 1) {
+        // Determine if the battery cell is below or above the desired setpoint (25°C)
+        double temp_error = SETPOINT - battery[i].temp;
+        if (temp_error > 0) {
+            // Battery is cooler than setpoint: turn heater on
             heater_on = HEAT_COOL_POWER;
             cooler_on = 0;
-        }else if(temp_diff < 0){
+        } else if (temp_error < 0) {
+            // Battery is warmer than setpoint: turn cooler on
             heater_on = 0;
             cooler_on = HEAT_COOL_POWER;
-        }
-        else{
+        } else {
+            // At setpoint: no heating or cooling
             heater_on = 0;
             cooler_on = 0;
         }
-        //heater_on = (battery[i].temp < HEATER_ON_TEMP)? HEAT_COOL_POWER : 0;
-        //cooler_on = (battery[i].temp > COOLER_ON_TEMP)? HEAT_COOL_POWER : 0;
-    }
-    else{
+    } else {
+        // Under temperature attack condition, disable both
         heater_on = 0;
         cooler_on = 0;
     }
-    if(heater_on != 0 || cooler_on != 0) g_iftempfan = 1;
-    else g_iftempfan = 0;
+
+    // Update global fan status: 1 for active (heating or cooling), 0 for inactive
+    if (heater_on != 0 || cooler_on != 0) 
+        g_iftempfan = 1;
+    else 
+        g_iftempfan = 0;
+
+    // Compute net heat: ohmic heating from current plus heater minus cooler
     total_heat = (battery[i].R0 * pow(battery[i].charge_current, 2)) + heater_on - cooler_on;
+    // Update battery temperature:
+    // Passive exchange with ambient: (battery_temp - AirTemp)/3
     battery[i].temp += DELTA_TIME / 200 * (total_heat - (battery[i].temp - bms_temperature.AirTemp) / 3);
 }
 
