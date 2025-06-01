@@ -59,11 +59,11 @@ functions for print screen
 =================================================================*/
 
 double ScaleVoltage(uint16_t raw) {
-    return raw * 0.1;
+    return raw * 0.01;
 }
 
 uint16_t DeScaleVoltage(double voltage) {
-    return (uint16_t)(voltage * 10.0f);
+    return (uint16_t)(voltage * 100.0f);
 }
 
 void InitBatteryArray() {
