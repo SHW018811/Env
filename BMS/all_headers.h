@@ -63,7 +63,7 @@ all_headers.h
 #define DELTA_TIME 1.0
 #define HEATER_ON_TEMP 15.0
 #define COOLER_ON_TEMP 35.0
-#define HEAT_COOL_POWER 5.0
+#define HEAT_COOL_POWER 10.0
 #define R0_REFERENCE 0.00005884314
 #define R1_REFERENCE 0.01145801322
 #define R_COEFF 0.003
