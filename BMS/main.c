@@ -59,7 +59,7 @@ Attack..
 =================================================================*/
 
 int g_tempattack = 0;
-
+int g_surgeattack = 0;
 
 /*================================================================
 functions for print screen
@@ -99,7 +99,7 @@ void PrintBatteryBar(int soc) {                // soc stands on 0x626, BMS_SOC_t
 }
 
 void PrintInputMode(int mode) {
-    const char* items[] = {"air_temp", "Temperature_Down"};
+    const char* items[] = {"air_temp", "Temperature_Down", "Current_Surge"};
     const int num_items = sizeof(items) / sizeof(items[0]);
 
     for (int i = 0; i < num_items; i++) {
@@ -125,6 +125,7 @@ void PrintCell() {
     int local_air_temp = bms_temperature.AirTemp;
     int local_iftempfan = g_iftempfan;
     int local_tempattack = g_tempattack;
+    int local_surgeattack = g_surgeattack;
     pthread_mutex_unlock(&lock);
 
     for (int i = 0; i < BATTERY_CELLS; i++) {                       //print battery cells data
@@ -159,6 +160,8 @@ void PrintCell() {
     else if (local_iftempfan == 2) printf(RED "  [Heater fan active]  " RESET);
     else printf("  [fan not activate]  " RESET);
     if(local_tempattack == 1) printf(RED "[TempAttack]                " RESET);
+    else printf("                " RESET);
+    if(local_surgeattack == 1) printf(RED "[SurgeAttack]                " RESET);
     else printf("                " RESET);
 }
 
@@ -242,6 +245,9 @@ void ChangeValue(int mode, int ifup) {
             case 1:
                 g_tempattack = 1;
                 break;
+            case 2:
+                g_surgeattack = 1;
+                break;
             default:
                 break;
         }
@@ -253,6 +259,9 @@ void ChangeValue(int mode, int ifup) {
                 break;
             case 1:
                 g_tempattack = 0;
+                break;
+            case 2:
+                g_surgeattack = 0;
                 break;
             default:
                 break;
@@ -306,7 +315,7 @@ void *input_thread(void *arg) {                                     //tid1
                             ChangeValue(input_mode, 0);
                             break;
                         case RIGHT: // Right arrow
-                            if (input_mode < 2) input_mode++;
+                            if (input_mode < 3) input_mode++;
                             break;
                         case LEFT: // Left arrow
                             if (input_mode > 0) input_mode--;
