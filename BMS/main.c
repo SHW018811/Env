@@ -548,8 +548,8 @@ void ChargeCurrentLimits(int i){
     }
     if(battery[i].temp < 0.0) local_charge_current_limits = 0.0;
     else if(battery[i].temp < 15.0) local_charge_current_cc *= 0.5;
-    if(g_surgeattack != 1) battery[i].charge_current = local_charge_current_cc * (1 - 0.8 * 1);
-    else battery[i].charge_current = local_charge_current_cc;
+    if(g_surgeattack != 1) battery[i].charge_current = local_charge_current_limits;
+    else battery[i].charge_current = local_charge_current_min_cv;
 }
 
 void SimulateTerminalVoltage(int i){
@@ -756,7 +756,7 @@ void *generate_can_msg_thread(void *arg) {          // tid6
         bms_temperature.MinTemp = minmax_temp.Min;
         bms_temperature.MinTempID = minmax_temp.MinId;
 
-        bms_battery_info.Voltage = (total_voltages / BATTERY_CELLS);
+        bms_battery_info.Voltage = total_voltages;
         bms_battery_info.MaxVoltage = DeScaleVoltage(minmax_voltage.Max);
         bms_battery_info.MaxVoltageID = minmax_voltage.MaxId;
         bms_battery_info.MinVoltage = DeScaleVoltage(minmax_voltage.Min);
@@ -768,7 +768,7 @@ void *generate_can_msg_thread(void *arg) {          // tid6
         bms_resistance.MinResistance = minmax_resistance.Min;
         bms_resistance.MinResistanceID = minmax_resistance.MinId;
 
-        bms_charge_current_limits.Current = total_chargecurrent;
+        bms_charge_current_limits.Current = (total_chargecurrent / BATTERY_CELLS);
         bms_charge_current_limits.ChargeLimit = (total_chargecurrent / BATTERY_CELLS);
         pthread_mutex_unlock(&lock);
         usleep(500);
