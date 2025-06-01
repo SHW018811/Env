@@ -104,3 +104,10 @@ Battery_t battery[BATTERY_CELLS];
 Estimate_t estimate[BATTERY_CELLS] = {0};
 State_t battery_state[BATTERY_CELLS] = {0};
 Cell_Data_t cell_data[BATTERY_CELLS];
+
+MinMax_IdValue_t default_minmax = {
+    .Min = 1e9,
+    .Max = -1e9,
+    .MaxId = 0,
+    .MinId = 0
+};

@@ -132,6 +132,13 @@ typedef struct {
     double R;
 } State_t;
 
+typedef struct __attribute__((packed)) {
+    double_t Min;
+    double_t Max;
+    int8_t MinId;
+    int8_t MaxId;
+} MinMax_IdValue_t;
+
 
 
 /*================================================================
@@ -153,4 +160,6 @@ extern Cell_Data_t cell_data[BATTERY_CELLS];
 
 extern Estimate_t estimate[BATTERY_CELLS];
 extern State_t battery_state[BATTERY_CELLS];
+
+extern MinMax_IdValue_t default_minmax;
 #endif // DBC_H
