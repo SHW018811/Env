@@ -513,7 +513,7 @@ void Init_Battery(){
 void Update_Temperature(int i){
     double heater_on, cooler_on, total_heat;
     if(g_tempattack != 1){
-        double temp_diff = bms_temperature.AirTemp - battery[i].temp;
+        double temp_diff = bms_temperature.AirTemp - 25.0;
         if(temp_diff > 0){
             heater_on = HEAT_COOL_POWER;
             cooler_on = 0;
