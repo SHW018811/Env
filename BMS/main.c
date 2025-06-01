@@ -155,10 +155,11 @@ void PrintCell() {
 
     if (local_status) printf(GREEN "  [charging] " RESET);
     else printf(RED "  [not charging now]" RESET);
-    if (local_iftempfan == 1) printf(BLUE "  [Cooling fan active]               " RESET);
-    else if (local_iftempfan == 2) printf(RED "  [Heater fan active]                " RESET);
-    else printf("  [fan not activate]                " RESET);
+    if (local_iftempfan == 1) printf(BLUE "  [Cooling fan active]  " RESET);
+    else if (local_iftempfan == 2) printf(RED "  [Heater fan active]  " RESET);
+    else printf("  [fan not activate]  " RESET);
     if(local_tempattack == 1) printf(RED "[TempAttack]                " RESET);
+    else printf("                " RESET);
 }
 
 void PrintLogo(int option) {
