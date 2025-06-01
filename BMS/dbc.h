@@ -98,8 +98,8 @@ typedef struct __attribute__((packed)) {
 typedef struct __attribute__((packed)) {
     double_t temp;
     double_t R0, R1, C1;
-    uint16_t capacity;
-    uint8_t charge_current;
+    double_t capacity;
+    double_t charge_current;
     double_t voltage_terminal;
     double_t voltage_delay;
     double_t SOC;
