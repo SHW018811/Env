@@ -537,8 +537,10 @@ void Update_Temperature(int i){
     }
 
     // Update global fan status: 1 for active (heating or cooling), 0 for inactive
-    if (heater_on != 0 || cooler_on != 0) 
+    if (cooler_on != 0)
         g_iftempfan = 1;
+    else if(heater_on != 0)
+        g_iftempfan = 2;
     else 
         g_iftempfan = 0;
 
