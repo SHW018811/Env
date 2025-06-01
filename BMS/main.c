@@ -667,6 +667,7 @@ void CellBalancing(int i) {
 */
 
 void *ekf_thread(void *arg){                        //tid5
+    double local_total_voltage = 0;
     while(ifrunning){
         pthread_mutex_lock(&lock);
         for(int i=0; i<BATTERY_CELLS; i++){    
@@ -681,7 +682,13 @@ void *ekf_thread(void *arg){                        //tid5
             for(int k=0; k<BATTERY_CELLS; k++) avg_soc += battery[k].SOC;
             avg_soc /= BATTERY_CELLS;
             if(avg_soc > 90.0) CellBalancing(i); 
+
+            local_total_voltage += battery[i].voltage_terminal;
         }
+        local_total_voltage = local_total_voltage / BATTERY_CELLS;
+
+        uint16_t raw_voltage = DeScaleVoltage(local_total_voltage);
+        bms_battery_info.Voltage = raw_voltage;
         pthread_mutex_unlock(&lock);
         usleep(10000);
     }
