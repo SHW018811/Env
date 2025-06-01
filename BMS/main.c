@@ -55,6 +55,13 @@ int ifvoltageerror = 0; //check if battery voltage value is in range
 int g_iftempfan = 0;      //if temp fan works
 
 /*================================================================
+Attack..
+=================================================================*/
+
+int g_tempattack = 0;
+
+
+/*================================================================
 functions for print screen
 =================================================================*/
 
@@ -92,7 +99,7 @@ void PrintBatteryBar(int soc) {                // soc stands on 0x626, BMS_SOC_t
 }
 
 void PrintInputMode(int mode) {
-    const char* items[] = {"air_temp", "C1temp", "C1voltage", "C2temp", "C2voltage"};
+    const char* items[] = {"air_temp", "Temperature_Down"};
     const int num_items = sizeof(items) / sizeof(items[0]);
 
     for (int i = 0; i < num_items; i++) {
@@ -117,6 +124,7 @@ void PrintCell() {
     int local_status = bms_status.Status;
     int local_air_temp = bms_temperature.AirTemp;
     int local_iftempfan = g_iftempfan;
+    int local_tempattack = g_tempattack;
     pthread_mutex_unlock(&lock);
 
     for (int i = 0; i < BATTERY_CELLS; i++) {                       //print battery cells data
@@ -149,8 +157,9 @@ void PrintCell() {
     else printf(RED "  [not charging now]" RESET);
     if (local_iftempfan == 1) printf(BLUE "  [Cooling fan active]               " RESET);
     else if (local_iftempfan == 2) printf(RED "  [Heater fan active]                " RESET);
-    else printf("  [fan not activate]               " RESET);
-    printf("Test");
+    else printf("  [fan not activate]  " RESET);
+    if(local_tempattack == 1) printf(RED "[TempAttack]  " RESET);
+    // if -> printf("[TestAttack]");
 }
 
 void PrintLogo(int option) {
@@ -231,16 +240,7 @@ void ChangeValue(int mode, int ifup) {
                 if (bms_temperature.AirTemp < 127) bms_temperature.AirTemp ++;
                 break;
             case 1:
-                if (battery[0].temp < 127) battery[0].temp++;
-                break;
-            case 2:
-                if (battery[0].voltage_terminal < 4.2) battery[0].voltage_terminal += 0.1;
-                break;
-            case 3:
-                if (battery[1].temp < 127) battery[1].temp++;
-                break;
-            case 4:
-                if (battery[1].voltage_terminal < 4.2) battery[1].voltage_terminal += 0.1;
+                g_tempattack = 1;
                 break;
             default:
                 break;
@@ -252,16 +252,7 @@ void ChangeValue(int mode, int ifup) {
                 if (bms_temperature.AirTemp > -127) bms_temperature.AirTemp --;
                 break;
             case 1:
-                if (battery[0].temp > -127) battery[0].temp--;
-                break;
-            case 2:
-                if (battery[0].voltage_terminal > 2.5) battery[0].voltage_terminal -= 0.1;
-                break;
-            case 3:
-                if (battery[1].temp > -127) battery[1].temp--;
-                break;
-            case 4:
-                if (battery[1].voltage_terminal > 2.5) battery[1].voltage_terminal -= 0.1;
+                g_tempattack = 0;
                 break;
             default:
                 break;
@@ -302,18 +293,6 @@ void *input_thread(void *arg) {                                     //tid1
             case ' ':       //whiespace key pressed
                 bms_status.Status =!bms_status.Status;
                 break;
-            case 'a':
-                if (battery[0].temp > 0) battery[0].temp--;
-                break;
-            case 'A':
-                if (battery[0].temp < 100) battery[0].temp++;
-                break;
-            case 'g':
-                if (bms_soc.SOC > 0) bms_soc.SOC--;
-                break;
-            case 'G':
-                if (bms_soc.SOC < 100) bms_soc.SOC++;
-                break;
             case '\033': { // ESC || arrow key and...
                 // Check if this is an arrow key sequence
                 char next_char = getchar();
@@ -321,11 +300,13 @@ void *input_thread(void *arg) {                                     //tid1
                     char arrow = getchar();
                     switch (arrow) {        //use ChangeValue()
                         case UP:   // Up arrow
-                            ChangeValue(input_mode, 1); break;
+                            ChangeValue(input_mode, 1);
+                            break;
                         case DOWN:   // Down arrow
-                            ChangeValue(input_mode, 0); break;
+                            ChangeValue(input_mode, 0);
+                            break;
                         case RIGHT: // Right arrow
-                            if (input_mode < 4) input_mode++;
+                            if (input_mode < 2) input_mode++;
                             break;
                         case LEFT: // Left arrow
                             if (input_mode > 0) input_mode--;
