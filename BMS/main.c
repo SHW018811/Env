@@ -150,6 +150,7 @@ void PrintCell() {
     if (local_iftempfan == 1) printf(BLUE "  [Cooling fan active]               " RESET);
     else if (local_iftempfan == 2) printf(RED "  [Heater fan active]                " RESET);
     else printf("  [fan not activate]               " RESET);
+    printf("Test");
 }
 
 void PrintLogo(int option) {
@@ -626,8 +627,6 @@ void CellBalancing(int i) {
     }
 }
 /*
-    웹 코드 -> 완성본으로 올리기
-    LSTM -> 정상 데이터 기반 학습 후 예측
     시뮬레이터 -> 전류 상승 및 온도 상승 같은 시나리오 구현 -> BMS 대응
     시뮬레이터 -> 시나리오 실행 -> BMS 오류 -> LSTM 모델이 대응
 
