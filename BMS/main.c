@@ -513,18 +513,28 @@ void Init_Battery(){
 void Update_Temperature(int i){
     const double SETPOINT = 25.0;
     double heater_on = 0, cooler_on = 0, total_heat;
+    double temp_error, abs_error, power_to_use;
 
     if (g_tempattack != 1) {
-        // Determine if the battery cell is below or above the desired setpoint (25°C)
-        double temp_error = SETPOINT - battery[i].temp;
+        // Determine difference from setpoint
+        temp_error = SETPOINT - battery[i].temp;
+        abs_error = fabs(temp_error);
+
+        // Select power: half if error between 20 and 30, otherwise full
+        if (abs_error >= 20.0 && abs_error <= 30.0) {
+            power_to_use = HEAT_COOL_POWER * 0.5;
+        } else {
+            power_to_use = HEAT_COOL_POWER;
+        }
+
         if (temp_error > 0) {
-            // Battery is cooler than setpoint: turn heater on
-            heater_on = HEAT_COOL_POWER;
+            // Battery is cooler than setpoint: heat
+            heater_on = power_to_use;
             cooler_on = 0;
         } else if (temp_error < 0) {
-            // Battery is warmer than setpoint: turn cooler on
+            // Battery is warmer than setpoint: cool
             heater_on = 0;
-            cooler_on = HEAT_COOL_POWER;
+            cooler_on = power_to_use;
         } else {
             // At setpoint: no heating or cooling
             heater_on = 0;
@@ -536,18 +546,18 @@ void Update_Temperature(int i){
         cooler_on = 0;
     }
 
-    // Update global fan status: 1 for active (heating or cooling), 0 for inactive
+    // Update global fan status: 2 for heater, 1 for cooler, 0 for inactive
     if (cooler_on != 0)
         g_iftempfan = 1;
-    else if(heater_on != 0)
+    else if (heater_on != 0)
         g_iftempfan = 2;
     else 
         g_iftempfan = 0;
 
     // Compute net heat: ohmic heating from current plus heater minus cooler
     total_heat = (battery[i].R0 * pow(battery[i].charge_current, 2)) + heater_on - cooler_on;
-    // Update battery temperature:
-    // Passive exchange with ambient: (battery_temp - AirTemp)/3
+
+    // Update battery temperature with passive exchange with ambient
     battery[i].temp += DELTA_TIME / 200 * (total_heat - (battery[i].temp - bms_temperature.AirTemp) / 3);
 }
 
