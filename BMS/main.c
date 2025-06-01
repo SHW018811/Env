@@ -511,32 +511,36 @@ void Init_Battery(){
 }
 
 void Update_Temperature(int i){
+    const double UPPER_THRESHOLD = 30.0;
+    const double LOWER_THRESHOLD = 20.0;
     const double SETPOINT = 25.0;
     double heater_on = 0, cooler_on = 0, total_heat;
-    double temp_error, abs_error, power_to_use;
+    double power_to_use = HEAT_COOL_POWER;
+    double temp = battery[i].temp;
 
     if (g_tempattack != 1) {
-        // Determine difference from setpoint
-        temp_error = SETPOINT - battery[i].temp;
-        abs_error = fabs(temp_error);
-
-        // Select power: half if error between 20 and 30, otherwise full
-        if (abs_error >= 20.0 && abs_error <= 30.0) {
-            power_to_use = HEAT_COOL_POWER * 0.5;
-        } else {
-            power_to_use = HEAT_COOL_POWER;
+        // If temperature is above upper threshold, start (or continue) cooling
+        if (temp > UPPER_THRESHOLD) {
+            cooler_on = power_to_use;
+            heater_on = 0;
         }
-
-        if (temp_error > 0) {
-            // Battery is cooler than setpoint: heat
+        // If temperature is below lower threshold, start (or continue) heating
+        else if (temp < LOWER_THRESHOLD) {
             heater_on = power_to_use;
             cooler_on = 0;
-        } else if (temp_error < 0) {
-            // Battery is warmer than setpoint: cool
-            heater_on = 0;
+        }
+        // If cooler is currently active (g_iftempfan == 1), keep cooling until <= SETPOINT
+        else if (g_iftempfan == 1 && temp > SETPOINT) {
             cooler_on = power_to_use;
-        } else {
-            // At setpoint: no heating or cooling
+            heater_on = 0;
+        }
+        // If heater is currently active (g_iftempfan == 2), keep heating until >= SETPOINT
+        else if (g_iftempfan == 2 && temp < SETPOINT) {
+            heater_on = power_to_use;
+            cooler_on = 0;
+        }
+        // Otherwise, no heating or cooling
+        else {
             heater_on = 0;
             cooler_on = 0;
         }
@@ -546,7 +550,7 @@ void Update_Temperature(int i){
         cooler_on = 0;
     }
 
-    // Update global fan status: 2 for heater, 1 for cooler, 0 for inactive
+    // Update global fan status: 1 for cooler, 2 for heater, 0 for inactive
     if (cooler_on != 0)
         g_iftempfan = 1;
     else if (heater_on != 0)
@@ -558,7 +562,9 @@ void Update_Temperature(int i){
     total_heat = (battery[i].R0 * pow(battery[i].charge_current, 2)) + heater_on - cooler_on;
 
     // Update battery temperature with passive exchange with ambient
-    battery[i].temp += DELTA_TIME / 200 * (total_heat - (battery[i].temp - bms_temperature.AirTemp) / 3);
+    battery[i].temp += DELTA_TIME / 200 
+                       * (total_heat 
+                          - (battery[i].temp - bms_temperature.AirTemp) / 3);
 }
 
 void Update_Resistance(int i){
