@@ -60,6 +60,7 @@ Attack..
 
 int g_tempattack = 0;
 int g_surgeattack = 0;
+int g_voltageattack = 0;
 
 /*================================================================
 functions for print screen
@@ -99,7 +100,7 @@ void PrintBatteryBar(int soc) {                // soc stands on 0x626, BMS_SOC_t
 }
 
 void PrintInputMode(int mode) {
-    const char* items[] = {"air_temp", "Temperature_Down", "Current_Surge"};
+    const char* items[] = {"air_temp", "Temperature_Down", "Current_Surge", "Voltage_Over"};
     const int num_items = sizeof(items) / sizeof(items[0]);
 
     for (int i = 0; i < num_items; i++) {
@@ -126,6 +127,7 @@ void PrintCell() {
     int local_iftempfan = g_iftempfan;
     int local_tempattack = g_tempattack;
     int local_surgeattack = g_surgeattack;
+    int local_voltageattack = g_voltageattack;
     pthread_mutex_unlock(&lock);
 
     for (int i = 0; i < BATTERY_CELLS; i++) {                       //print battery cells data
@@ -160,9 +162,11 @@ void PrintCell() {
     else if (local_iftempfan == 2) printf(RED "  [Heater fan active]  " RESET);
     else printf("  [fan not activate]  " RESET);
     if(local_tempattack == 1) printf(RED "[TempAttack]  " RESET);
-    else printf(" " RESET);
+    else printf("                   " RESET);
     if(local_surgeattack == 1) printf(RED "[SurgeAttack]  " RESET);
-    else printf(" " RESET);
+    else printf("                   " RESET);
+    if(local_voltageattack == 1) printf(RED "[VoltageAttack]  " RESET);
+    else printf("                   " RESET);
 }
 
 void PrintLogo(int option) {
@@ -248,6 +252,9 @@ void ChangeValue(int mode, int ifup) {
             case 2:
                 g_surgeattack = 1;
                 break;
+            case 3:
+                g_voltageattack = 1;
+                break;
             default:
                 break;
         }
@@ -263,6 +270,8 @@ void ChangeValue(int mode, int ifup) {
             case 2:
                 g_surgeattack = 0;
                 break;
+            case 3:
+                g_voltageattack = 0;
             default:
                 break;
         }
@@ -315,7 +324,7 @@ void *input_thread(void *arg) {                                     //tid1
                             ChangeValue(input_mode, 0);
                             break;
                         case RIGHT: // Right arrow
-                            if (input_mode < 3) input_mode++;
+                            if (input_mode < 4) input_mode++;
                             break;
                         case LEFT: // Left arrow
                             if (input_mode > 0) input_mode--;
@@ -685,7 +694,7 @@ void *ekf_thread(void *arg){                        // tid5
             if(avg_soc > 90.0) CellBalancing(i); 
         }
         pthread_mutex_unlock(&lock);
-        usleep(100000);
+        usleep(10000);
     }
     return NULL;
 }
