@@ -161,6 +161,7 @@ void PrintCell() {
     if (local_iftempfan == 1) printf(BLUE "  [Cooling fan active]  " RESET);
     else if (local_iftempfan == 2) printf(RED "  [Heater fan active]  " RESET);
     else printf("  [fan not activate]  " RESET);
+    printf(YELLOW "  Charge Current : %lf  ", battery[0].charge_current RESET);
     if(local_tempattack == 1) printf(RED "[TempAttack]  " RESET);
     else printf("                   " RESET);
     if(local_surgeattack == 1) printf(RED "[SurgeAttack]  " RESET);
@@ -562,9 +563,7 @@ void Update_Temperature(int i){
     total_heat = (battery[i].R0 * pow(battery[i].charge_current, 2)) + heater_on - cooler_on;
 
     // Update battery temperature with passive exchange with ambient
-    battery[i].temp += DELTA_TIME / 200 
-                       * (total_heat 
-                          - (battery[i].temp - bms_temperature.AirTemp) / 3);
+    battery[i].temp += DELTA_TIME / 200 * (total_heat - (battery[i].temp - bms_temperature.AirTemp) / 3);
 }
 
 void Update_Resistance(int i){
@@ -587,10 +586,30 @@ void ChargeCurrentLimits(int i){
         if(local_charge_current_limits < local_charge_current_min_cv) local_charge_current_limits = local_charge_current_min_cv;
         if(local_charge_current_limits > 0.0) local_charge_current_limits = 0;
     }
-    if(battery[i].temp < 0.0) local_charge_current_limits = 0.0;
-    else if(battery[i].temp < 15.0) local_charge_current_cc *= 0.5;
-    if(g_surgeattack != 1) battery[i].charge_current = local_charge_current_limits;
-    else battery[i].charge_current = local_charge_current_min_cv;
+
+    // if(battery[i].temp < 0.0) local_charge_current_limits = 0.0;
+    // else if(battery[i].temp < 15.0) local_charge_current_cc *= 0.5;
+    // if(g_surgeattack != 1) battery[i].charge_current = local_charge_current_limits;
+    // else battery[i].charge_current = local_charge_current_min_cv;
+    if(g_surgeattack != 1){
+        if(battery[i].temp < 0.0) local_charge_current_limits = 0.0;
+        else if(battery[i].temp < 15.0){
+            double temp_ratio = battery[i].temp / 15.0;
+            if(temp_ratio < 0.0) temp_ratio = 0.0;
+            if(temp_ratio > 1.0) temp_ratio = 1.0;
+            local_charge_current_limits = local_charge_current_limits * temp_ratio;
+        }
+        else if(battery[i].temp < 35.0){ //유지
+        }
+        else if(battery[i].temp < 50.0){
+            double temp_ratio = (battery[i].temp - 35.0) / (50.0 - 35.0);
+            if(temp_ratio > 1.0) temp_ratio = 1.0;
+            local_charge_current_limits = local_charge_current_cc * (1.0 - temp_ratio);
+        }
+        else local_charge_current_limits = 0.0;
+        battery[i].charge_current = local_charge_current_limits;
+    }
+    else battery[i].charge_current = local_charge_current_cc;
 }
 
 void SimulateTerminalVoltage(int i){
