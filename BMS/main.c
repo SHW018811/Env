@@ -161,7 +161,7 @@ void PrintCell() {
     if (local_iftempfan == 1) printf(BLUE "  [Cooling fan active]  " RESET);
     else if (local_iftempfan == 2) printf(RED "  [Heater fan active]  " RESET);
     else printf("  [fan not activate]  " RESET);
-    printf(YELLOW "  Charge Current : %lf  ", battery[0].charge_current RESET);
+    printf(YELLOW "  Charge Current : %lf  ", battery[0].charge_current, RESET);
     if(local_tempattack == 1) printf(RED "[TempAttack]  " RESET);
     else printf("                   " RESET);
     if(local_surgeattack == 1) printf(RED "[SurgeAttack]  " RESET);
