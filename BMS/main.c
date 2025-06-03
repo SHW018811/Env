@@ -611,6 +611,8 @@ void ChargeCurrentLimits(int i){
         battery[i].charge_current = local_charge_current_limits;
     }
     else battery[i].charge_current = local_charge_current_cc;
+
+    if(battery[i].SOC == 100.0) battery[i].charge_current = 0.0; 
 }
 
 void SimulateTerminalVoltage(int i){
